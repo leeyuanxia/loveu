@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">还记得吗？</string>
+    <string name="app_name">别忘了哦</string>
+    <string name="loading_toast">别急！记得正在同步你的状态呢</string>
 </resources>

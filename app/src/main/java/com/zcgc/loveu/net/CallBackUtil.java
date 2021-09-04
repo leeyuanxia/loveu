@@ -28,7 +28,7 @@ public abstract class CallBackUtil<T> {
         });
     };
 
-    public  void onSeccess(Call call, Response response){
+    public  void onSuccess(Call call, Response response){
         final T obj = onParseResponse(call, response);
         mMainHandler.post(new Runnable() {
             @Override

@@ -3,8 +3,11 @@ package com.zcgc.loveu.net;
 
 import android.text.TextUtils;
 
+import com.tencent.mmkv.MMKV;
+
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +49,7 @@ public class RequestUtil {
 
     private String mFileType;//文件类型的参数，与file同时存在
 
-    private Map<String, String> mHeaderMap;//头参数
+    private Map<String, String> mHeaderMap = new HashMap<>();//头参数
 
     private CallBackUtil mCallBack;//回调接口
 
@@ -105,8 +108,10 @@ public class RequestUtil {
         mFileType = fileType;
 
         mParamsMap = paramsMap;
-
-        mHeaderMap = headerMap;
+        if (headerMap!=null){
+            mHeaderMap.putAll(headerMap);
+        }
+        mHeaderMap.put("Set-Cookie",MMKV.defaultMMKV().getString("Set-Cookie",""));
 
         mCallBack = callBack;
 

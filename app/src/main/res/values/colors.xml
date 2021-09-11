@@ -10,7 +10,10 @@
 
     <color name="_333333">#333333</color>
     <color name="_999999">#999999</color>
-    <color name="_1296db">#1296db</color>
+    <color name="_0099ff">#0099ff</color>
     <color name="_ff0000">#ff0000</color>
     <color name="_666666">#666666</color>
+    <color name="_eeeeee">#eeeeee</color>
+    <color name="transparent">#00FFFFFF</color>
+    <color name="red">#d81e06</color>
 </resources>

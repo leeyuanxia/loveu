@@ -57,7 +57,7 @@ public class SplashActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call call, Exception e) {
-                enterMainActivity("");
+                enterMainActivity();
             }
 
             @Override
@@ -67,13 +67,16 @@ public class SplashActivity extends AppCompatActivity {
                     User user = jsonResult.getData();
                     if (user != null){
                         UserManager.getInstance().setUser(user);
-                        getMemoryFromServer();
                     }
                 }
+                enterMainActivity();
             }
         });
     }
 
+    /**
+     * 首页删除获取memory的逻辑
+     */
     private void getMemoryFromServer() {
         OkhttpUtil.okHttpPost(UrlManager.GET_MEMORY, new CallBackUtil() {
             @Override
@@ -88,7 +91,7 @@ public class SplashActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call call, Exception e) {
-                enterMainActivity("");
+                enterMainActivity();
             }
 
             @Override
@@ -96,18 +99,18 @@ public class SplashActivity extends AppCompatActivity {
                 JsonResult<Memory> jsonResult = (JsonResult<Memory>) response;
                 if (jsonResult.getCode() == JsonResult.OK ){
                     if (jsonResult.getList() != null ){
-                        enterMainActivity(new Gson().toJson(jsonResult.getList()));
+
                         return;
                     }
                 }
-                enterMainActivity("");
+                enterMainActivity();
             }
         });
     }
 
-    private void enterMainActivity(String memoryJson) {
+    private void enterMainActivity() {
         startActivity(new Intent(SplashActivity.this,MainActivity.class)
-                .putExtra("memoryJson",memoryJson));
+               );
         finish();
     }
 

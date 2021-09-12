@@ -14,6 +14,6 @@
     <color name="_ff0000">#ff0000</color>
     <color name="_666666">#666666</color>
     <color name="_eeeeee">#eeeeee</color>
-    <color name="transparent">#00FFFFFF</color>
+    <color name="transparent">#00000000</color>
     <color name="red">#d81e06</color>
 </resources>

@@ -27,7 +27,7 @@ public class CalendarReminderUtils {
      * 检查是否已经添加了日历账户，如果没有添加先添加一个日历账户再查询
      * 获取账户成功返回账户id，否则返回-1
      */
-    private static int checkAndAddCalendarAccount(Context context) {
+    public static int checkAndAddCalendarAccount(Context context) {
         int oldId = checkCalendarAccount(context);
         if( oldId >= 0 ){
             return oldId;
@@ -44,7 +44,7 @@ public class CalendarReminderUtils {
     /**
      * 检查是否存在现有账户，存在则返回账户id，否则返回-1
      */
-    private static int checkCalendarAccount(Context context) {
+    public static int checkCalendarAccount(Context context) {
         Cursor userCursor = context.getContentResolver().query(Uri.parse(CALENDER_URL), null, null, null, null);
         try {
             if (userCursor == null) { //查询返回空值

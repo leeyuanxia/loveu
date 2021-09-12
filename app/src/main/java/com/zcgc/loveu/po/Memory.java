@@ -7,6 +7,15 @@ public class Memory {
     private long time;
     private long addTime;
     private String bg;
+    private int repeat;
+
+    public int getRepeat() {
+        return repeat;
+    }
+
+    public void setRepeat(int repeat) {
+        this.repeat = repeat;
+    }
 
     public int getId() {
         return id;

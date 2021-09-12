@@ -1,8 +1,11 @@
 package com.zcgc.loveu.activity;
 
 import android.animation.Animator;
+import android.annotation.SuppressLint;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -11,6 +14,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,10 +29,19 @@ import com.luck.picture.lib.config.PictureConfig;
 import com.luck.picture.lib.config.PictureMimeType;
 import com.luck.picture.lib.entity.LocalMedia;
 import com.luck.picture.lib.listener.OnResultCallbackListener;
+import com.tencent.mmkv.MMKV;
 import com.zcgc.loveu.R;
+import com.zcgc.loveu.database.SqlLiteHelper;
+import com.zcgc.loveu.dialog.PromptDialog;
 import com.zcgc.loveu.engine.GlideEngine;
+import com.zcgc.loveu.manager.ConstantManager;
+import com.zcgc.loveu.manager.UserManager;
+import com.zcgc.loveu.net.OkhttpUtil;
+import com.zcgc.loveu.po.Memory;
+import com.zcgc.loveu.utils.CalendarReminderUtils;
 import com.zcgc.loveu.utils.DialogUtils;
 import com.zcgc.loveu.utils.GlideImageLoader;
+import com.zcgc.loveu.utils.TimeUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -57,7 +70,7 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
     private ConstraintLayout mCLAddViewIfRemind;
     private SwitchButton mSBIfRemind,mSBCare;
     private boolean ifRemind;
-    private boolean mostCare;
+    private boolean mostCare = false;
     private SwitchButton mSBBG;
     private ImageView mIVAddViewBG;
     private boolean canChooseImage;
@@ -65,11 +78,19 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
     private TextView mTVContentLength;
     private ConstraintLayout mPuppet0;
     private LocalMedia localMedia;
+    private EditText mETMemoryTitle;
+    private PromptDialog ifChangeDialog;
+    private ImageView mAddSubmit;
+    private SqlLiteHelper mDatabaseHelper;
+    private SQLiteDatabase database;
+    private ConstraintLayout mCLLoadingView;
 
     @Override
     protected void onCreate(@Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_add_memory);
+        mDatabaseHelper = new SqlLiteHelper(getApplicationContext(), ConstantManager.DATABASE_NAME, null, 1);
+        database = mDatabaseHelper.getWritableDatabase();
         initAddUI();
         initData();
 
@@ -100,6 +121,9 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
         mETAddContent = findViewById(R.id.et_add_memory_content);
         mTVContentLength = findViewById(R.id.tv_content_length);
         mPuppet0 = findViewById(R.id.mPuppet0);
+        mETMemoryTitle = findViewById(R.id.et_add_memory_title);
+        mAddSubmit = findViewById(R.id.iv_add_memory_ok);
+        mCLLoadingView = findViewById(R.id.cl_loading_view);
         mETAddContent.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -144,6 +168,7 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
         mCLAddViewCare.setOnClickListener(this);
         mCLAddViewBG.setOnClickListener(this);
         mCLAddViewIfRemind.setOnClickListener(this);
+        mAddSubmit.setOnClickListener(this);
         mCLAddViewContainer.post(new Runnable() {
             @Override
             public void run() {
@@ -152,6 +177,7 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
         });
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public void onClick(View v) {
         switch (v.getId()){
@@ -176,8 +202,94 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
             case R.id.cl_add_memory_if_remind:
                 mSBIfRemind.setChecked(!mSBIfRemind.isChecked());
                 break;
+            case R.id.iv_add_memory_ok:
+                checkAddMemory();
+                break;
         }
     }
+
+    private void checkAddMemory() {
+        if (mETMemoryTitle.getText().toString().trim().length() == 0){
+            Toast.makeText(getApplicationContext(),"记得需要记得名才能记得哦",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (mostCare && !"".equals(MMKV.defaultMMKV().getString("most_care_id",""))){
+            showIfChangeDialog();
+            return;
+        }
+        addMemory();
+    }
+
+    private void addMemory() {
+        Memory memory =new Memory();
+        memory.setAddTime(System.currentTimeMillis());
+        if (localMedia!=null){
+            memory.setBg(localMedia.getPath());
+        }
+        memory.setTime(TimeUtils.getTimeFromDateString(dateString.split(" ")[0])+(
+                "无".equals( mTVRemindTime.getText().toString())?0:
+                        TimeUtils.getTimeFromHAMString(mTVRemindTime.getText().toString())));
+        memory.setTitle(mETMemoryTitle.getText().toString());
+        memory.setContent(mETAddContent.getText().toString());
+        memory.setRepeat(OPTIONS1);
+        showLoadingView();
+        if (UserManager.getInstance().isLogin()){
+            uploadMemory(memory);
+        }else {
+            saveMemory(memory);
+        }
+    }
+
+    private void showLoadingView() {
+        mCLLoadingView.setVisibility(View.VISIBLE);
+    }
+
+    private void saveMemory(Memory memory) {
+        long id =mDatabaseHelper.insertMemory(database,memory);
+        if (id >0 ){
+            new Handler().postDelayed( () -> {
+                Toast.makeText(getApplicationContext(),"添加成功",Toast.LENGTH_SHORT).show();
+                mCLLoadingView.setVisibility(View.GONE);
+                if (ifRemind){
+
+                }else {
+                    startAddViewAnim(false);
+                }
+            },3000);
+        }else {
+            new Handler().postDelayed( () -> {
+                Toast.makeText(getApplicationContext(),"添加失败",Toast.LENGTH_SHORT).show();
+                mCLLoadingView.setVisibility(View.GONE);
+                startAddViewAnim(false);
+            },3000);
+        }
+    }
+
+    private void uploadMemory(Memory memory) {
+
+    }
+
+    private void showIfChangeDialog() {
+        ifChangeDialog = new PromptDialog.Builder(AddMemoryActivity.this)
+                .setTitle("记得想告诉你")
+                .setContent("已经有个记得被你设置为最关心了呢，是否需要替换成这个")
+                .setConfirmStr("好的")
+                .setCancelStr("算了吧")
+                .setOnDialogButtonClickListener(new PromptDialog.Builder.onDialogButtonClickListener() {
+                    @Override
+                    public void onConfirm() {
+                        ifChangeDialog.dismiss();
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        mSBCare.setChecked(false);
+                        ifChangeDialog.dismiss();
+                    }
+                }).build();
+        ifChangeDialog.show();
+    }
+
     private void checkChooseImage() {
         if (!canChooseImage){
             return;
@@ -306,6 +418,16 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
 
     @Override
     public void onBackPressed() {
+        if (mCLLoadingView.getVisibility() == View.VISIBLE){
+            return;
+        }
         startAddViewAnim(false);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        database.close();
+        mDatabaseHelper.close();
     }
 }

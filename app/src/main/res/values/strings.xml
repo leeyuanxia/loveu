@@ -21,4 +21,8 @@
     <string name="add_memory_bg_text">背景图片</string>
     <string name="add_memory_content_text">内容</string>
     <string name="remember_what">你想让记得记得什么呢</string>
+    <string name="perDialog">记得想告诉你</string>
+    <string name="cancel">取消</string>
+    <string name="submit">提交</string>
+    <string name="adding">添加中</string>
 </resources>

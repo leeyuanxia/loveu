@@ -58,6 +58,7 @@ public class RequestUtil {
     private Request mOkHttpRequest;//请求对象
 
     private Request.Builder mRequestBuilder;//请求对象的构建者
+    private Call call;
 
     RequestUtil(String methodType, String url, Map<String, String> paramsMap, Map<String, String> headerMap, CallBackUtil callBack) {
 
@@ -180,6 +181,9 @@ public class RequestUtil {
 
     }
 
+    public void cancelRequest(){
+        call.cancel();
+    }
     /**
      * 得到body对象
      */
@@ -402,7 +406,8 @@ public class RequestUtil {
 
     void execute() {
 
-        mOkHttpClient.newCall(mOkHttpRequest).enqueue(new Callback() {
+        call =mOkHttpClient.newCall(mOkHttpRequest);
+        call.enqueue(new Callback() {
 
             @Override
             public void onFailure(final Call call, final IOException e) {

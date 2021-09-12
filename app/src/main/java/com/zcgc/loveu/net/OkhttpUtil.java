@@ -84,7 +84,9 @@ public class OkhttpUtil {
 
     }
 
+    public static void cancelRequest(String requestUrl){
 
+    }
     /**
      * post请求，可以传递参数
      *

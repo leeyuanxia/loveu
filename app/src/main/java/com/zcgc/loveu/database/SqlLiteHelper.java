@@ -2,6 +2,7 @@ package com.zcgc.loveu.database;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -58,5 +59,20 @@ public class SqlLiteHelper extends SQLiteOpenHelper {
         contentValues.put("bg",memory.getBg());
         contentValues.put("repeat",memory.getRepeat());
         return db.insert(ConstantManager.MEMORY_LOCAL_TABLE,"",contentValues);
+    }
+
+    public Memory findMemoryById(SQLiteDatabase db, int id) {
+        Cursor cursor = db.query(ConstantManager.MEMORY_LOCAL_TABLE,new String[]{"*"},
+                "id =?",new String[]{String.valueOf(id)},null,null,null);
+        cursor.moveToFirst();
+        Memory memory= new Memory();
+        memory.setId(cursor.getInt(cursor.getColumnIndex("id")));
+        memory.setRepeat(cursor.getInt(cursor.getColumnIndex("repeat")));
+        memory.setContent(cursor.getString(cursor.getColumnIndex("content")));
+        memory.setTitle(cursor.getString(cursor.getColumnIndex("title")));
+        memory.setTime(cursor.getLong(cursor.getColumnIndex("time")));
+        memory.setAddTime(cursor.getLong(cursor.getColumnIndex("addTime")));
+        memory.setBg(cursor.getString(cursor.getColumnIndex("bg")));
+        return memory;
     }
 }

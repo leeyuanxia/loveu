@@ -30,6 +30,7 @@ import com.luck.picture.lib.config.PictureMimeType;
 import com.luck.picture.lib.entity.LocalMedia;
 import com.luck.picture.lib.listener.OnResultCallbackListener;
 import com.tencent.mmkv.MMKV;
+import com.zcgc.loveu.AddMemorySuccessEvent;
 import com.zcgc.loveu.R;
 import com.zcgc.loveu.database.SqlLiteHelper;
 import com.zcgc.loveu.dialog.PromptDialog;
@@ -41,7 +42,10 @@ import com.zcgc.loveu.po.Memory;
 import com.zcgc.loveu.utils.CalendarReminderUtils;
 import com.zcgc.loveu.utils.DialogUtils;
 import com.zcgc.loveu.utils.GlideImageLoader;
+import com.zcgc.loveu.utils.KeyboardUtils;
 import com.zcgc.loveu.utils.TimeUtils;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -209,11 +213,12 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
     }
 
     private void checkAddMemory() {
+        KeyboardUtils.hideKeyboard(AddMemoryActivity.this);
         if (mETMemoryTitle.getText().toString().trim().length() == 0){
             Toast.makeText(getApplicationContext(),"记得需要记得名才能记得哦",Toast.LENGTH_SHORT).show();
             return;
         }
-        if (mostCare && !"".equals(MMKV.defaultMMKV().getString("most_care_id",""))){
+        if (mostCare && MMKV.defaultMMKV().getInt("most_care_id",-1)!=-1){
             showIfChangeDialog();
             return;
         }
@@ -224,7 +229,7 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
         Memory memory =new Memory();
         memory.setAddTime(System.currentTimeMillis());
         if (localMedia!=null){
-            memory.setBg(localMedia.getPath());
+            memory.setBg(localMedia.getCompressPath());
         }
         memory.setTime(TimeUtils.getTimeFromDateString(dateString.split(" ")[0])+(
                 "无".equals( mTVRemindTime.getText().toString())?0:
@@ -247,14 +252,18 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
     private void saveMemory(Memory memory) {
         long id =mDatabaseHelper.insertMemory(database,memory);
         if (id >0 ){
+            if (mostCare){
+                MMKV.defaultMMKV().putInt("most_care_id", (int) id);
+            }
+            EventBus.getDefault().post(new AddMemorySuccessEvent(0));
             new Handler().postDelayed( () -> {
                 Toast.makeText(getApplicationContext(),"添加成功",Toast.LENGTH_SHORT).show();
                 mCLLoadingView.setVisibility(View.GONE);
-                if (ifRemind){
+              /*  if (ifRemind){
 
-                }else {
+                }else {*/
                     startAddViewAnim(false);
-                }
+                /*}*/
             },3000);
         }else {
             new Handler().postDelayed( () -> {
@@ -279,12 +288,15 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
                     @Override
                     public void onConfirm() {
                         ifChangeDialog.dismiss();
+                        mSBCare.setChecked(true);
+                        addMemory();
                     }
 
                     @Override
                     public void onCancel() {
                         mSBCare.setChecked(false);
                         ifChangeDialog.dismiss();
+                        addMemory();
                     }
                 }).build();
         ifChangeDialog.show();
@@ -302,14 +314,15 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
                 .openGallery(PictureMimeType.ofImage())
                 .imageEngine(GlideEngine.createGlideEngine())
                 .selectionMode(PictureConfig.SINGLE)
+                .isCompress(true)
                 .forResult(new OnResultCallbackListener<LocalMedia>() {
                     @Override
                     public void onResult(List<LocalMedia> result) {
                         // 结果回调
                         localMedia=result.get(0);
                         GlideImageLoader.displayImage(getApplicationContext(),localMedia
-                                        .getPath()
-                                ,mIVAddViewBG,25,3);
+                                        .getCompressPath()
+                                ,mIVAddViewBG,20,3);
                     }
 
                     @Override

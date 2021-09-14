@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
 import android.view.ViewAnimationUtils;
@@ -23,6 +24,10 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import com.bigkoo.pickerview.configure.PickerOptions;
 import com.bigkoo.pickerview.listener.OnTimeSelectListener;
 import com.bigkoo.pickerview.view.TimePickerView;
+import com.google.gson.Gson;
+import com.hjq.permissions.OnPermissionCallback;
+import com.hjq.permissions.Permission;
+import com.hjq.permissions.XXPermissions;
 import com.kyleduo.switchbutton.SwitchButton;
 import com.luck.picture.lib.PictureSelector;
 import com.luck.picture.lib.config.PictureConfig;
@@ -88,11 +93,23 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
     private SqlLiteHelper mDatabaseHelper;
     private SQLiteDatabase database;
     private ConstraintLayout mCLLoadingView;
+    private Memory oldMemory;
+    private ArrayList<String> items;
 
     @Override
     protected void onCreate(@Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_add_memory);
+        items=new ArrayList<>();
+        items.add("无");
+        items.add("每天");
+        items.add("每周");
+        items.add("每月");
+        items.add("每年");
+        String memoryString=getIntent().getStringExtra("memory");
+        if (!"".equals(memoryString)){
+            oldMemory = new Gson().fromJson(memoryString,Memory.class);
+        }
         mDatabaseHelper = new SqlLiteHelper(getApplicationContext(), ConstantManager.DATABASE_NAME, null, 1);
         database = mDatabaseHelper.getWritableDatabase();
         initAddUI();
@@ -101,9 +118,39 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
     }
 
     private void initData() {
-        dateString= new SimpleDateFormat("yyyy-MM-dd").format(memoryDate)
-                +" "+new SimpleDateFormat("E").format(memoryDate);
-        mTVDate.setText(dateString);
+        if (oldMemory ==null) {
+            dateString = new SimpleDateFormat("yyyy-MM-dd").format(memoryDate)
+                    + " " + new SimpleDateFormat("E").format(memoryDate);
+            mTVDate.setText(dateString);
+        }else {
+            setMemoryData();
+        }
+    }
+
+    private void setMemoryData() {
+        if (!TextUtils.isEmpty(oldMemory.getBg())) {
+            mSBBG.setChecked(true);
+            GlideImageLoader.displayImage(getApplicationContext(), oldMemory.getBg(), mIVAddViewBG,20,3);
+        }
+        mETMemoryTitle.setText(oldMemory.getTitle());
+        mETAddContent.setText(oldMemory.getContent());
+        if (MMKV.defaultMMKV().getInt("most_care_id",-1)==oldMemory.getId()){
+            mSBCare.setChecked(true);
+        }
+        OPTIONS1 = oldMemory.getRepeat();
+        mTVRepeat.setText(items.get(OPTIONS1));
+        if (CalendarReminderUtils.findCalendarEvent(getApplicationContext(),
+                oldMemory.getTitle(),oldMemory.getContent())){
+            mSBIfRemind.setChecked(true);
+        }
+        mTVContentLength.setText(oldMemory.getContent().length()+"/144");
+        if (mETAddContent.getText().length() == 144){
+            mTVContentLength.setTextColor(Color.parseColor("#d81e06"));
+        }else {
+            mTVContentLength.setTextColor(Color.parseColor("#333333"));
+        }
+        mTVDate.setText(new SimpleDateFormat("yyyy-MM-dd EE").format(new Date(oldMemory.getTime())));
+        mTVRemindTime.setText(new SimpleDateFormat("HH:mm").format(new Date(oldMemory.getTime())));
     }
 
     private void initAddUI() {
@@ -218,9 +265,16 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
             Toast.makeText(getApplicationContext(),"记得需要记得名才能记得哦",Toast.LENGTH_SHORT).show();
             return;
         }
-        if (mostCare && MMKV.defaultMMKV().getInt("most_care_id",-1)!=-1){
-            showIfChangeDialog();
-            return;
+        if (oldMemory!=null) {
+            if (mostCare && MMKV.defaultMMKV().getInt("most_care_id", -1)!=oldMemory.getId()){
+                showIfChangeDialog();
+                return;
+            }
+        }else {
+            if (mostCare && MMKV.defaultMMKV().getInt("most_care_id", -1) != -1) {
+                showIfChangeDialog();
+                return;
+            }
         }
         addMemory();
     }
@@ -230,8 +284,10 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
         memory.setAddTime(System.currentTimeMillis());
         if (localMedia!=null){
             memory.setBg(localMedia.getCompressPath());
+        }else if (oldMemory!=null){
+            memory.setBg(oldMemory.getBg());
         }
-        memory.setTime(TimeUtils.getTimeFromDateString(dateString.split(" ")[0])+(
+        memory.setTime(TimeUtils.getTimeFromDateString(mTVDate.getText().toString().split(" ")[0])+(
                 "无".equals( mTVRemindTime.getText().toString())?0:
                         TimeUtils.getTimeFromHAMString(mTVRemindTime.getText().toString())));
         memory.setTitle(mETMemoryTitle.getText().toString());
@@ -258,12 +314,9 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
             EventBus.getDefault().post(new AddMemorySuccessEvent(0));
             new Handler().postDelayed( () -> {
                 Toast.makeText(getApplicationContext(),"添加成功",Toast.LENGTH_SHORT).show();
-                mCLLoadingView.setVisibility(View.GONE);
-              /*  if (ifRemind){
+                checkCalenderPermission(memory);
+                startAddViewAnim(false);
 
-                }else {*/
-                    startAddViewAnim(false);
-                /*}*/
             },3000);
         }else {
             new Handler().postDelayed( () -> {
@@ -272,6 +325,41 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
                 startAddViewAnim(false);
             },3000);
         }
+    }
+
+    private void checkCalenderPermission(Memory memory ) {
+        XXPermissions.with(AddMemoryActivity.this)
+                .permission(Permission.Group.CALENDAR)
+                .request(new OnPermissionCallback() {
+                    @Override
+                    public void onGranted(List<String> permissions, boolean all) {
+                        if (all){
+                            if (ifRemind) {
+                                if (oldMemory!=null) {
+                                    CalendarReminderUtils.deleteCalendarEvent(getApplicationContext()
+                                            ,oldMemory.getTitle(),oldMemory.getContent());
+                                }
+                                CalendarReminderUtils.addCalendarEvent(getApplicationContext(),
+                                        memory.getTitle(), memory.getContent(), memory.getTime(), 0, memory.getRepeat());
+                                Toast.makeText(getApplicationContext(), "记得添加事件成功！", Toast.LENGTH_SHORT).show();
+                            }else {
+                                CalendarReminderUtils.deleteCalendarEvent(getApplicationContext(),
+                                        memory.getTitle(), memory.getContent());
+                            }
+                        }else {
+                            Toast.makeText(getApplicationContext(),"记得添加事件失败！",Toast.LENGTH_SHORT).show();
+                        }
+                        mCLLoadingView.setVisibility(View.GONE);
+                        startAddViewAnim(false);
+                    }
+
+                    @Override
+                    public void onDenied(List<String> permissions, boolean never) {
+                        Toast.makeText(getApplicationContext(),"你禁止了权限，记得将无法为您添加入事件！",Toast.LENGTH_SHORT).show();
+                        mCLLoadingView.setVisibility(View.GONE);
+                        startAddViewAnim(false);
+                    }
+                });
     }
 
     private void uploadMemory(Memory memory) {
@@ -354,12 +442,7 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
         pickerOptions.textSizeContent=25;
         pickerOptions.lineSpacingMultiplier = 2.0f;
         pickerOptions.option1 = OPTIONS1;
-        ArrayList<String> items=new ArrayList<>();
-        items.add("无");
-        items.add("每天");
-        items.add("每周");
-        items.add("每月");
-        items.add("每年");
+
         pickerOptions.optionsSelectListener = (options1, options2, options3, v) ->{
             OPTIONS1 = options1;
             mTVRepeat.setText(items.get(options1));

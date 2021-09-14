@@ -1,5 +1,7 @@
 package com.zcgc.loveu.utils;
 
+import android.text.format.DateFormat;
+
 import java.util.Calendar;
 import java.util.TimeZone;
 
@@ -34,4 +36,19 @@ public class TimeUtils {
         calendarThatTime.set(Calendar.SECOND,0);
         return (int) ((calendarThatTime.getTimeInMillis()-calendarNow.getTimeInMillis())/(24*60*60*1000));
     }
+
+    public static long getYearsAfterFromNow(int years) {
+        Calendar calendarNow = Calendar.getInstance();
+        calendarNow.set(Calendar.YEAR,calendarNow.get(Calendar.YEAR)+years);
+        return calendarNow.getTimeInMillis();
+    }
+    public static String GetUTCTime(int years) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.YEAR,cal.get(Calendar.YEAR)+years);
+        int zoneOffset = cal.get(java.util.Calendar.ZONE_OFFSET);
+        int dstOffset = cal.get(java.util.Calendar.DST_OFFSET);
+        cal.add(Calendar.MILLISECOND, -(zoneOffset + dstOffset));
+        return (String) DateFormat.format("yyyyMMdd'T'kkmmss'Z'", cal);
+    }
+
 }

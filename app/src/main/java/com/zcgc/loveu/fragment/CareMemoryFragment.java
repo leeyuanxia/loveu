@@ -1,5 +1,6 @@
 package com.zcgc.loveu.fragment;
 
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -13,15 +14,18 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.gson.Gson;
 import com.tencent.mmkv.MMKV;
 import com.zcgc.loveu.AddMemorySuccessEvent;
 import com.zcgc.loveu.R;
+import com.zcgc.loveu.activity.AddMemoryActivity;
 import com.zcgc.loveu.database.SqlLiteHelper;
 import com.zcgc.loveu.manager.ConstantManager;
 import com.zcgc.loveu.manager.UserManager;
 import com.zcgc.loveu.po.Memory;
 import com.zcgc.loveu.po.User;
 import com.zcgc.loveu.utils.GlideImageLoader;
+import com.zcgc.loveu.utils.NoDoubleClickListener;
 import com.zcgc.loveu.utils.TimeUtils;
 
 import org.greenrobot.eventbus.EventBus;
@@ -44,6 +48,7 @@ public class CareMemoryFragment extends Fragment {
     private TextView mDayDate;
     private TextView mMemoryContent;
     private ImageView mCareBg;
+    private ImageView mIVEditMemory;
 
     @Nullable
     @org.jetbrains.annotations.Nullable
@@ -51,7 +56,20 @@ public class CareMemoryFragment extends Fragment {
     public View onCreateView(@NonNull @NotNull LayoutInflater inflater, @Nullable @org.jetbrains.annotations.Nullable ViewGroup container, @Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
         view=inflater.inflate(R.layout.fragment_care_memory,container,false);
         initUI();
+        initData();
         return view;
+    }
+
+    private void initData() {
+        mIVEditMemory.setOnClickListener(new NoDoubleClickListener() {
+            @Override
+            protected void onNoDoubleClick(View v) {
+                if (memory!=null){
+                    startActivity(new Intent(getActivity(), AddMemoryActivity.class)
+                            .putExtra("memory",new Gson().toJson(memory)));
+                }
+            }
+        });
     }
 
     private void initUI() {
@@ -62,6 +80,7 @@ public class CareMemoryFragment extends Fragment {
         mDayDate=view.findViewById(R.id.text_memory_day_in_year);
         mMemoryContent=view.findViewById(R.id.text_memory_content);
         mCareBg=view.findViewById(R.id.iv_care_bg);
+        mIVEditMemory=view.findViewById(R.id.iv_care_edit_memory);
         if (UserManager.getInstance().isLogin()){
 
         }else {

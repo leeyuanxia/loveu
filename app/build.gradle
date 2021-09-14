@@ -50,4 +50,5 @@ dependencies {
     implementation 'com.github.gzu-liyujiang.AndroidPicker:WheelView:3.1.1'
     implementation 'com.kyleduo.switchbutton:library:2.1.0'
     implementation 'io.github.lucksiege:pictureselector:v2.7.3-rc08'
+    implementation 'com.github.getActivity:XXPermissions:12.2'
 }

@@ -9,7 +9,9 @@ import android.net.Uri;
 import android.provider.CalendarContract;
 import android.text.TextUtils;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.TimeZone;
 
 public class CalendarReminderUtils {
@@ -97,7 +99,7 @@ public class CalendarReminderUtils {
     /**
      * 添加日历事件
      */
-    public static void addCalendarEvent(Context context, String title, String description, long reminderTime, int previousDate) {
+    public static void addCalendarEvent(Context context, String title, String description, long reminderTime, int previousDate,int repeat) {
         if (context == null) {
             return;
         }
@@ -105,7 +107,6 @@ public class CalendarReminderUtils {
         if (calId < 0) { //获取账户id失败直接返回，添加日历事件失败
             return;
         }
-
         //添加日历事件
         Calendar mCalendar = Calendar.getInstance();
         mCalendar.setTimeInMillis(reminderTime);//设置开始时间
@@ -117,15 +118,40 @@ public class CalendarReminderUtils {
         event.put("description", description);
         event.put("calendar_id", calId); //插入账户的id
         event.put(CalendarContract.Events.DTSTART, start);
-        event.put(CalendarContract.Events.DTEND, end);
+        if (repeat == 0) {
+            event.put(CalendarContract.Events.DTEND, end);
+        }else {
+            String until = TimeUtils.GetUTCTime(5);
+            switch (repeat) {
+                // 每天
+                case ScheduleConstants.REPEAT_CYCLE_DAILY:
+                    event.put(CalendarContract.Events.RRULE, "FREQ=DAILY;UNTIL=" + until + ";WKST=SU");
+                    break;
+                // 每周
+                case ScheduleConstants.REPEAT_CYCLE_WEEKLY:
+                    event.put(CalendarContract.Events.RRULE, "FREQ=WEEKLY;UNTIL=" + until + ";WKST=SU");
+                    break;
+                // 每月
+                case ScheduleConstants.REPEAT_CYCLE_MONTHLY:
+                    event.put(CalendarContract.Events.RRULE, "FREQ=MONTHLY;UNTIL=" + until + ";WKST=SU");
+                    break;
+                // 每年
+                case ScheduleConstants.REPEAT_CYCLE_YEARLY:
+                    event.put(CalendarContract.Events.RRULE, "FREQ=YEARLY;UNTIL=" + until + ";WKST=SU");
+                    break;
+                default:
+                    break;
+            }
+            event.put(CalendarContract.Events.DTEND, (Integer) null);
+            event.put(CalendarContract.Events.DURATION,"P"+1+"H");
+        }
+
         event.put(CalendarContract.Events.HAS_ALARM, 1);//设置有闹钟提醒
         event.put(CalendarContract.Events.EVENT_TIMEZONE, "Asia/Shanghai");//这个是时区，必须有
         Uri newEvent = context.getContentResolver().insert(Uri.parse(CALENDER_EVENT_URL), event); //添加事件
         if (newEvent == null) { //添加日历事件失败直接返回
             return;
         }
-
-        //事件提醒的设定
         ContentValues values = new ContentValues();
         values.put(CalendarContract.Reminders.EVENT_ID, ContentUris.parseId(newEvent));
         values.put(CalendarContract.Reminders.MINUTES, previousDate * 24 * 60);// 提前previousDate天有提醒
@@ -139,7 +165,38 @@ public class CalendarReminderUtils {
     /**
      * 删除日历事件
      */
-    public static void deleteCalendarEvent(Context context,String title) {
+    public static boolean findCalendarEvent(Context context,String title,String content) {
+        if (context == null) {
+            return false;
+        }
+        Cursor eventCursor = context.getContentResolver().query(Uri.parse(CALENDER_EVENT_URL), null, null, null, null);
+        try {
+            if (eventCursor == null) { //查询返回空值
+                return false;
+            }
+            if (eventCursor.getCount() > 0) {
+                //遍历所有事件，找到title跟需要查询的title一样的项
+                for (eventCursor.moveToFirst(); !eventCursor.isAfterLast(); eventCursor.moveToNext()) {
+                    String eventTitle = eventCursor.getString(eventCursor.getColumnIndex("title"));
+                    String description = eventCursor.getString(eventCursor.getColumnIndex("description"));
+                    if (!TextUtils.isEmpty(title) &&!TextUtils.isEmpty(description)&&
+                            title.equals(eventTitle) &&description.equals(content)  ) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        } finally {
+            if (eventCursor != null) {
+                eventCursor.close();
+            }
+        }
+    }
+
+    /**
+     * 删除日历事件
+     */
+    public static void deleteCalendarEvent(Context context,String title,String description) {
         if (context == null) {
             return;
         }
@@ -152,7 +209,9 @@ public class CalendarReminderUtils {
                 //遍历所有事件，找到title跟需要查询的title一样的项
                 for (eventCursor.moveToFirst(); !eventCursor.isAfterLast(); eventCursor.moveToNext()) {
                     String eventTitle = eventCursor.getString(eventCursor.getColumnIndex("title"));
-                    if (!TextUtils.isEmpty(title) && title.equals(eventTitle)) {
+                    String descriptions = eventCursor.getString(eventCursor.getColumnIndex("description"));
+                    if (!TextUtils.isEmpty(title) &&!TextUtils.isEmpty(description)&&
+                            title.equals(eventTitle) &&descriptions.equals(description)  ) {
                         int id = eventCursor.getInt(eventCursor.getColumnIndex(CalendarContract.Calendars._ID));//取得id
                         Uri deleteUri = ContentUris.withAppendedId(Uri.parse(CALENDER_EVENT_URL), id);
                         int rows = context.getContentResolver().delete(deleteUri, null, null);

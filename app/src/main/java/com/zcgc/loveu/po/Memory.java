@@ -9,6 +9,7 @@ public class Memory {
     private String bg;
     private int repeat;
 
+
     public int getRepeat() {
         return repeat;
     }

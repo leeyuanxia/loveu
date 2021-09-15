@@ -75,4 +75,16 @@ public class SqlLiteHelper extends SQLiteOpenHelper {
         memory.setBg(cursor.getString(cursor.getColumnIndex("bg")));
         return memory;
     }
+
+    public void updateMemory(SQLiteDatabase database, Memory memory) {
+        ContentValues contentValues=new ContentValues();
+        contentValues.put("title",memory.getTitle());
+        contentValues.put("content",memory.getContent());
+        contentValues.put("time",memory.getTime());
+        contentValues.put("addTime",memory.getAddTime());
+        contentValues.put("bg",memory.getBg());
+        contentValues.put("repeat",memory.getRepeat());
+        database.update(ConstantManager.MEMORY_LOCAL_TABLE,contentValues,
+                "id=?",new String[]{String.valueOf(memory.getId())});
+    }
 }

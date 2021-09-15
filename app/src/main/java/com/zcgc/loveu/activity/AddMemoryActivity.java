@@ -269,6 +269,8 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
             if (mostCare && MMKV.defaultMMKV().getInt("most_care_id", -1)!=oldMemory.getId()){
                 showIfChangeDialog();
                 return;
+            }else if (!mostCare&& MMKV.defaultMMKV().getInt("most_care_id", -1)==oldMemory.getId()){
+                MMKV.defaultMMKV().putInt("most_care_id", -1);
             }
         }else {
             if (mostCare && MMKV.defaultMMKV().getInt("most_care_id", -1) != -1) {
@@ -306,16 +308,22 @@ public class AddMemoryActivity extends AppCompatActivity implements View.OnClick
     }
 
     private void saveMemory(Memory memory) {
-        long id =mDatabaseHelper.insertMemory(database,memory);
+        long id = 0;
+        if (oldMemory!= null){
+            id = oldMemory.getId();
+            memory.setId(oldMemory.getId());
+            mDatabaseHelper.updateMemory(database,memory);
+        }else {
+            id =mDatabaseHelper.insertMemory(database,memory);
+        }
         if (id >0 ){
             if (mostCare){
                 MMKV.defaultMMKV().putInt("most_care_id", (int) id);
             }
-            EventBus.getDefault().post(new AddMemorySuccessEvent(0));
             new Handler().postDelayed( () -> {
+                EventBus.getDefault().post(new AddMemorySuccessEvent(0));
                 Toast.makeText(getApplicationContext(),"添加成功",Toast.LENGTH_SHORT).show();
                 checkCalenderPermission(memory);
-                startAddViewAnim(false);
 
             },3000);
         }else {

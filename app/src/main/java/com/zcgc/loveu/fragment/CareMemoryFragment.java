@@ -2,6 +2,7 @@ package com.zcgc.loveu.fragment;
 
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -12,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
 
 import com.google.gson.Gson;
@@ -49,6 +51,7 @@ public class CareMemoryFragment extends Fragment {
     private TextView mMemoryContent;
     private ImageView mCareBg;
     private ImageView mIVEditMemory;
+    private ConstraintLayout mCLTopContent;
 
     @Nullable
     @org.jetbrains.annotations.Nullable
@@ -81,6 +84,7 @@ public class CareMemoryFragment extends Fragment {
         mMemoryContent=view.findViewById(R.id.text_memory_content);
         mCareBg=view.findViewById(R.id.iv_care_bg);
         mIVEditMemory=view.findViewById(R.id.iv_care_edit_memory);
+        mCLTopContent=view.findViewById(R.id.cl_memory_top_content);
         if (UserManager.getInstance().isLogin()){
 
         }else {
@@ -95,6 +99,7 @@ public class CareMemoryFragment extends Fragment {
         mDatabaseHelper = new SqlLiteHelper(getContext(), ConstantManager.DATABASE_NAME, null, 1);
         database = mDatabaseHelper.getWritableDatabase();
     }
+
     @Subscribe
     public void onAddMemorySuccessEvent(AddMemorySuccessEvent event){
         if (event.getAddType() == 0){
@@ -102,7 +107,6 @@ public class CareMemoryFragment extends Fragment {
         }else {
             getMostCareFromServerById();
         }
-
     }
 
     private void getMostCareFromServerById() {
@@ -137,7 +141,10 @@ public class CareMemoryFragment extends Fragment {
         mDayDate.setText(new SimpleDateFormat("yyyy-MM-dd").format(new Date(memory.getTime())));
         mDayInWeek.setText(new SimpleDateFormat("EE").format(new Date(memory.getTime())));
         if (!TextUtils.isEmpty(memory.getBg())) {
+            mCLTopContent.setBackgroundColor(getContext().getResources().getColor(R.color.transparent));
             GlideImageLoader.displayImage(getContext(), memory.getBg(), mCareBg,20,3);
+        }else {
+            mCLTopContent.setBackgroundColor(getContext().getResources().getColor(R.color._0099ff));
         }
     }
 

@@ -19,6 +19,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.tencent.mmkv.MMKV;
+import com.zcgc.loveu.AddMemorySuccessEvent;
 import com.zcgc.loveu.R;
 import com.zcgc.loveu.adapter.MyFragmentPagerAdapter;
 import com.zcgc.loveu.fragment.CareMemoryFragment;
@@ -27,6 +28,8 @@ import com.zcgc.loveu.po.Memory;
 import com.zcgc.loveu.utils.GlideImageLoader;
 import com.zcgc.loveu.utils.PackageInfoUtils;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 import org.raphets.roundimageview.RoundImageView;
 
 import java.util.ArrayList;
@@ -48,13 +51,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ViewPager mViewPager;
     private MyFragmentPagerAdapter fragmentAdapter;
     private boolean isExit = false;
+    private ArrayList<Fragment> fragments;
+    private FragmentManager fragmentManager;
+    private CareMemoryFragment careFragment;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        EventBus.getDefault().register(this);
         initUI();
         initData();
     }
@@ -67,9 +73,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initViewpager() {
-        ArrayList<Fragment> fragments = new ArrayList<>();
-        fragments.add(new CareMemoryFragment());
-        FragmentManager fragmentManager = this.getSupportFragmentManager();
+        fragments = new ArrayList<>();
+        if (MMKV.defaultMMKV().getInt("most_care_id",-1)!=-1) {
+            careFragment=new CareMemoryFragment();
+            fragments.add(careFragment);
+        }
+        fragmentManager = this.getSupportFragmentManager();
         fragmentAdapter = new MyFragmentPagerAdapter(fragmentManager, fragments);
         mViewPager.setAdapter(fragmentAdapter);
         mViewPager.setCurrentItem(0);
@@ -220,9 +229,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     }
+    @Subscribe
+    public void onAddMemorySuccessEvent(AddMemorySuccessEvent event){
+        checkMostCare();
+    }
+
+    private void checkMostCare() {
+        if (MMKV.defaultMMKV().getInt("most_care_id",-1)!=-1){
+            if (careFragment == null){
+                careFragment = new CareMemoryFragment();
+                fragments.add(careFragment);
+                fragmentAdapter = new MyFragmentPagerAdapter(fragmentManager, fragments);;
+                mViewPager.setAdapter(fragmentAdapter);
+            }
+        }else {
+            if (careFragment != null) {
+                fragments.remove(careFragment);
+                careFragment = null;
+            }
+            fragmentAdapter = new MyFragmentPagerAdapter(fragmentManager, fragments);;
+            mViewPager.setAdapter(fragmentAdapter);
+        }
+
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        EventBus.getDefault().unregister(this);
     }
 }

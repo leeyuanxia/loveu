@@ -26,15 +26,15 @@ public class TimeUtils {
 
     public static int calDayDistanceFromNow(long time) {
         Calendar calendarNow = Calendar.getInstance();
-        calendarNow.set(Calendar.HOUR_OF_DAY,0);
+        calendarNow.set(Calendar.HOUR_OF_DAY,8);
         calendarNow.set(Calendar.MINUTE,0);
         calendarNow.set(Calendar.SECOND,0);
         Calendar calendarThatTime = Calendar.getInstance();
         calendarThatTime.setTimeInMillis(time);
-        calendarThatTime.set(Calendar.HOUR_OF_DAY,0);
+        calendarThatTime.set(Calendar.HOUR_OF_DAY,8);
         calendarThatTime.set(Calendar.MINUTE,0);
         calendarThatTime.set(Calendar.SECOND,0);
-        return (int) ((calendarThatTime.getTimeInMillis()-calendarNow.getTimeInMillis())/(24*60*60*1000));
+        return (int) ((calendarThatTime.getTimeInMillis()-calendarNow.getTimeInMillis())/(24l*60l*60l*1000l));
     }
 
     public static long getYearsAfterFromNow(int years) {
